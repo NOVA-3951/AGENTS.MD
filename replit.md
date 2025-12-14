@@ -2,19 +2,19 @@
 
 ## Overview
 
-An MCP (Model Context Protocol) server deployable on Smithery that dynamically exposes documentation files from `/docs/*.md` as resources for AI agents.
+An MCP (Model Context Protocol) server deployable on Smithery that dynamically exposes documentation files from `/docs/*.md` as resources for AI agents. Uses HTTP/SSE transport for hosted deployments.
 
 ## Project Structure
 
 ```
 ├── src/
-│   └── index.ts      # Main MCP server implementation
+│   └── index.ts      # Main MCP server (HTTP/SSE transport)
 ├── docs/             # Documentation files (add .md files here)
 │   ├── getting-started.md
 │   ├── api-reference.md
 │   └── examples.md
 ├── dist/             # Compiled JavaScript output
-├── smithery.yaml     # Smithery deployment configuration
+├── smithery.yaml     # Smithery deployment configuration (HTTP type)
 ├── Dockerfile        # Container configuration for Smithery
 ├── package.json      # Node.js dependencies
 └── tsconfig.json     # TypeScript configuration
@@ -22,9 +22,16 @@ An MCP (Model Context Protocol) server deployable on Smithery that dynamically e
 
 ## How It Works
 
-1. Server scans `/docs` directory for `.md` files on startup
-2. Each file is exposed as a resource with URI `docs://<filename>`
-3. AI agents can list all resources and read specific documents
+1. Server runs an Express HTTP server with SSE transport
+2. Scans `/docs` directory for `.md` files on startup
+3. Each file is exposed as a resource with URI `docs://<filename>`
+4. AI agents connect via SSE and can list/read all documentation
+
+## Endpoints
+
+- `GET /sse` - SSE connection endpoint for MCP clients
+- `POST /messages` - Message handling endpoint
+- `GET /health` - Health check endpoint
 
 ## Development
 
@@ -37,7 +44,7 @@ npm start       # Run compiled version
 
 ## Deployment
 
-Configured for Smithery deployment via `smithery.yaml`.
+Configured for Smithery deployment via `smithery.yaml` with HTTP transport on port 3000.
 
 ## Adding Documentation
 

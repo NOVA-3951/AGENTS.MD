@@ -8,4 +8,7 @@ RUN npm ci --only=production
 COPY dist ./dist
 COPY docs ./docs
 
+ENV PORT=3000
+EXPOSE 3000
+
 CMD ["node", "dist/index.js"]

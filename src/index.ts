@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
   ListResourceTemplatesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import express, { Request, Response } from "express";
 import * as fs from "fs";
 import * as path from "path";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
+const PORT = parseInt(process.env.PORT || "3000", 10);
 
 interface DocFile {
   name: string;
@@ -108,13 +110,41 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   };
 });
 
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Docs MCP Server running on stdio");
-}
+const app = express();
+app.use(express.json());
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
+const transports = new Map<string, SSEServerTransport>();
+
+app.get("/sse", async (req: Request, res: Response) => {
+  const transport = new SSEServerTransport("/messages", res);
+  const sessionId = Date.now().toString();
+  transports.set(sessionId, transport);
+  
+  res.on("close", () => {
+    transports.delete(sessionId);
+  });
+
+  await server.connect(transport);
+});
+
+app.post("/messages", async (req: Request, res: Response) => {
+  const sessionId = req.query.sessionId as string;
+  const transport = transports.get(sessionId);
+  
+  if (transport) {
+    await transport.handlePostMessage(req, res);
+  } else {
+    res.status(400).json({ error: "No active session" });
+  }
+});
+
+app.get("/health", (_req: Request, res: Response) => {
+  res.json({ status: "ok", docs: getDocFiles().map(d => d.name) });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
+  console.log(`SSE endpoint: /sse`);
+  console.log(`Messages endpoint: /messages`);
+  console.log(`Available docs: ${getDocFiles().map(d => d.name).join(", ")}`);
 });
