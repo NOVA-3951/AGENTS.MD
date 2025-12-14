@@ -13,6 +13,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
+import * as crypto from "crypto";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
 const PORT = parseInt(process.env.PORT || "8081", 10);
@@ -192,19 +193,23 @@ app.use(cors({
 }));
 
 app.all("/mcp", async (req: Request, res: Response) => {
+  console.log(`MCP request: ${req.method} ${req.url}`);
   try {
     const server = createServer();
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
+      sessionIdGenerator: () => crypto.randomUUID(),
     });
 
     res.on("close", () => {
+      console.log("MCP connection closed");
       transport.close();
       server.close();
     });
 
     await server.connect(transport);
+    console.log("Server connected to transport, handling request...");
     await transport.handleRequest(req, res);
+    console.log("Request handled");
   } catch (error) {
     console.error("Error handling MCP request:", error);
     if (!res.headersSent) {
