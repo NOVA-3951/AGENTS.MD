@@ -3,10 +3,12 @@ FROM node:20-slim
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
-
-COPY dist ./dist
+COPY tsconfig.json ./
+COPY src ./src
 COPY docs ./docs
+
+RUN npm ci
+RUN npm run build
 
 ENV PORT=3000
 EXPOSE 3000

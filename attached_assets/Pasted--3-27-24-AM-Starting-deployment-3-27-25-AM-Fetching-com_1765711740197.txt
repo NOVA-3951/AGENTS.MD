@@ -1,0 +1,45 @@
+[3:27:24 AM] Starting deployment...
+[3:27:25 AM] Fetching commit information...
+[3:27:25 AM] Commit: cd15e11
+[3:27:25 AM] Creating GitHub deployment...
+[3:27:25 AM] GitHub deployment initialized
+[3:27:25 AM] Cloning repository...
+[3:27:26 AM] Validating files...
+[3:27:26 AM] Build files validated
+[3:27:33 AM] Deployment credentials configured
+[3:27:34 AM] Preparing build files...
+[3:27:34 AM] Build files prepared
+[3:27:34 AM] Building Docker image...
+[3:27:48 AM] #5 transferring dockerfile: 3.26kB 0.2s done
+[3:27:48 AM] #5 DONE 0.3s
+[3:27:48 AM] #6 DONE 0.4s
+[3:27:48 AM] #7 [internal] load metadata for docker.io/library/node:20-slim
+[3:27:48 AM] #7 DONE 0.6s
+[3:27:48 AM] #8 [internal] load .dockerignore
+[3:27:48 AM] #8 transferring context:
+[3:27:48 AM] #8 transferring context: 2B 0.1s done
+[3:27:48 AM] #8 DONE 0.2s
+[3:27:49 AM] #9 [internal] load build context
+[3:27:49 AM] #9 DONE 0.0s
+[3:27:49 AM] #10 [stage-1  1/13] FROM docker.io/library/node:20-slim@sha256:1b38aaddff63cd0d3a9b5b03863a71fd33ee62047dd2e915f494d96b4b9c18cc
+[3:27:49 AM] #10 resolve docker.io/library/node:20-slim@sha256:1b38aaddff63cd0d3a9b5b03863a71fd33ee62047dd2e915f494d96b4b9c18cc 0.0s done
+[3:27:49 AM] #10 DONE 0.0s
+[3:27:49 AM] #11 DONE 0.0s
+[3:27:49 AM] #9 [internal] load build context
+[3:27:49 AM] #9 transferring context: 60.88kB 0.3s done
+[3:27:49 AM] #9 DONE 0.3s
+[3:27:49 AM] #12 [stage-1  2/13] WORKDIR /app
+[3:27:49 AM] #12 CACHED
+[3:27:49 AM] #13 [stage-1  3/13] COPY package*.json ./
+[3:27:49 AM] #13 CACHED
+[3:27:49 AM] #14 [stage-1  4/13] RUN npm ci --only=production
+[3:27:49 AM] #14 CACHED
+[3:27:49 AM] #15 [stage-1  5/13] COPY dist ./dist
+[3:27:49 AM] #15 ERROR: failed to calculate checksum of ref cw3l4lfh2p5qdap908weoobdc::zodsxamk9ypj3tk8k4ps4v31k: "/dist": not found
+[3:27:49 AM] #11 CACHED
+[3:27:49 AM] ------
+[3:27:49 AM] > [stage-1  5/13] COPY dist ./dist:
+[3:27:49 AM] ------
+[3:27:49 AM] [1;36m
+[3:27:49 AM] Error:  "/dist": not found. Please check if the files exist in the context.
+[3:27:49 AM] Deploy failed: Failed to build Docker image. Check your Dockerfile syntax and build configuration. Review the build logs for specific errors. If it works locally but fails here, contact support or try again later.
