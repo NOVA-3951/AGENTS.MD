@@ -155,6 +155,16 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", docs: getDocFiles().map(d => d.name) });
 });
 
+app.get("/.well-known/mcp-config", (_req: Request, res: Response) => {
+  res.json({
+    configSchema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  });
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
   console.log(`MCP endpoint: /mcp`);
