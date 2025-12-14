@@ -8,11 +8,12 @@ import {
   ListResourceTemplatesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express, { Request, Response } from "express";
+import cors from "cors";
 import * as fs from "fs";
 import * as path from "path";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = parseInt(process.env.PORT || "8081", 10);
 
 interface DocFile {
   name: string;
@@ -115,21 +116,37 @@ function createServer(): Server {
 }
 
 const app = express();
+
+app.use(cors({
+  origin: '*',
+  exposedHeaders: ['Mcp-Session-Id', 'mcp-protocol-version'],
+  allowedHeaders: ['Content-Type', 'mcp-session-id'],
+}));
+
 app.use(express.json());
-
-const server = createServer();
-
-const transport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined,
-});
 
 app.all("/mcp", async (req: Request, res: Response) => {
   try {
+    const server = createServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+
+    res.on("close", () => {
+      transport.close();
+      server.close();
+    });
+
+    await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error("Error handling MCP request:", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      });
     }
   }
 });
@@ -138,17 +155,8 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", docs: getDocFiles().map(d => d.name) });
 });
 
-async function main() {
-  await server.connect(transport);
-  
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
-    console.log(`MCP endpoint: /mcp`);
-    console.log(`Available docs: ${getDocFiles().map(d => d.name).join(", ")}`);
-  });
-}
-
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
+  console.log(`MCP endpoint: /mcp`);
+  console.log(`Available docs: ${getDocFiles().map(d => d.name).join(", ")}`);
 });

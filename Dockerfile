@@ -10,7 +10,7 @@ COPY docs ./docs
 RUN npm ci
 RUN npm run build
 
-ENV PORT=3000
-EXPOSE 3000
+ENV PORT=8081
+EXPOSE 8081
 
 CMD ["node", "dist/index.js"]

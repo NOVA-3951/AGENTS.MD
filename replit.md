@@ -43,7 +43,7 @@ npm start       # Run compiled version
 
 ## Deployment
 
-Configured for Smithery deployment via `smithery.yaml` with HTTP transport on port 3000.
+Configured for Smithery deployment via `smithery.yaml` with HTTP transport on port 8081.
 
 ## Adding Documentation
 
