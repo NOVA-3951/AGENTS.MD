@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
@@ -117,36 +117,20 @@ function createServer(): Server {
 const app = express();
 app.use(express.json());
 
-const sessions = new Map<string, { server: Server; transport: SSEServerTransport }>();
+const server = createServer();
 
-app.get("/sse", async (req: Request, res: Response) => {
-  console.log("New SSE connection");
-  
-  const server = createServer();
-  const transport = new SSEServerTransport("/messages", res);
-  
-  const sessionId = transport.sessionId;
-  sessions.set(sessionId, { server, transport });
-  
-  res.on("close", () => {
-    console.log(`Session ${sessionId} closed`);
-    sessions.delete(sessionId);
-  });
-
-  await server.connect(transport);
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined,
 });
 
-app.post("/messages", async (req: Request, res: Response) => {
-  const sessionId = req.query.sessionId as string;
-  console.log(`POST /messages for session: ${sessionId}`);
-  
-  const session = sessions.get(sessionId);
-  
-  if (session) {
-    await session.transport.handlePostMessage(req, res);
-  } else {
-    console.log(`Session not found: ${sessionId}`);
-    res.status(400).json({ error: "Session not found" });
+app.all("/mcp", async (req: Request, res: Response) => {
+  try {
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error("Error handling MCP request:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 });
 
@@ -154,9 +138,17 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", docs: getDocFiles().map(d => d.name) });
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
-  console.log(`SSE endpoint: /sse`);
-  console.log(`Messages endpoint: /messages`);
-  console.log(`Available docs: ${getDocFiles().map(d => d.name).join(", ")}`);
+async function main() {
+  await server.connect(transport);
+  
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Docs MCP Server running on http://0.0.0.0:${PORT}`);
+    console.log(`MCP endpoint: /mcp`);
+    console.log(`Available docs: ${getDocFiles().map(d => d.name).join(", ")}`);
+  });
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
 });
