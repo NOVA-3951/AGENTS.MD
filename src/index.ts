@@ -46,82 +46,91 @@ function readDocFile(name: string): string | null {
   return fs.readFileSync(filePath, "utf-8");
 }
 
-const server = new Server(
-  {
-    name: "docs-mcp-server",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      resources: {},
+function createServer(): Server {
+  const server = new Server(
+    {
+      name: "docs-mcp-server",
+      version: "1.0.0",
     },
-  }
-);
-
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  const docFiles = getDocFiles();
-
-  const resources = docFiles.map((doc) => ({
-    uri: doc.uri,
-    name: doc.name,
-    description: `Documentation: ${doc.name}`,
-    mimeType: "text/markdown",
-  }));
-
-  return { resources };
-});
-
-server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
-  return {
-    resourceTemplates: [
-      {
-        uriTemplate: "docs://{name}",
-        name: "Documentation File",
-        description: "Access a specific documentation file by name. Available docs: " + 
-          getDocFiles().map(d => d.name).join(", "),
-        mimeType: "text/markdown",
+    {
+      capabilities: {
+        resources: {},
       },
-    ],
-  };
-});
+    }
+  );
 
-server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  const uri = request.params.uri;
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    const docFiles = getDocFiles();
 
-  if (!uri.startsWith("docs://")) {
-    throw new Error(`Unknown resource URI: ${uri}`);
-  }
+    const resources = docFiles.map((doc) => ({
+      uri: doc.uri,
+      name: doc.name,
+      description: `Documentation: ${doc.name}`,
+      mimeType: "text/markdown",
+    }));
 
-  const name = uri.replace("docs://", "");
-  const content = readDocFile(name);
+    return { resources };
+  });
 
-  if (content === null) {
-    throw new Error(`Documentation not found: ${name}`);
-  }
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+    return {
+      resourceTemplates: [
+        {
+          uriTemplate: "docs://{name}",
+          name: "Documentation File",
+          description: "Access a specific documentation file by name. Available docs: " + 
+            getDocFiles().map(d => d.name).join(", "),
+          mimeType: "text/markdown",
+        },
+      ],
+    };
+  });
 
-  return {
-    contents: [
-      {
-        uri,
-        mimeType: "text/markdown",
-        text: content,
-      },
-    ],
-  };
-});
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+
+    if (!uri.startsWith("docs://")) {
+      throw new Error(`Unknown resource URI: ${uri}`);
+    }
+
+    const name = uri.replace("docs://", "");
+    const content = readDocFile(name);
+
+    if (content === null) {
+      throw new Error(`Documentation not found: ${name}`);
+    }
+
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "text/markdown",
+          text: content,
+        },
+      ],
+    };
+  });
+
+  return server;
+}
 
 const app = express();
 app.use(express.json());
 
-const transports = new Map<string, SSEServerTransport>();
+const sessions = new Map<string, { server: Server; transport: SSEServerTransport }>();
 
 app.get("/sse", async (req: Request, res: Response) => {
+  console.log("New SSE connection");
+  
+  const server = createServer();
   const transport = new SSEServerTransport("/messages", res);
-  const sessionId = Date.now().toString();
-  transports.set(sessionId, transport);
+  
+  const sessionId = transport.sessionId;
+  sessions.set(sessionId, { server, transport });
   
   res.on("close", () => {
-    transports.delete(sessionId);
+    console.log(`Session ${sessionId} closed`);
+    sessions.delete(sessionId);
   });
 
   await server.connect(transport);
@@ -129,12 +138,15 @@ app.get("/sse", async (req: Request, res: Response) => {
 
 app.post("/messages", async (req: Request, res: Response) => {
   const sessionId = req.query.sessionId as string;
-  const transport = transports.get(sessionId);
+  console.log(`POST /messages for session: ${sessionId}`);
   
-  if (transport) {
-    await transport.handlePostMessage(req, res);
+  const session = sessions.get(sessionId);
+  
+  if (session) {
+    await session.transport.handlePostMessage(req, res);
   } else {
-    res.status(400).json({ error: "No active session" });
+    console.log(`Session not found: ${sessionId}`);
+    res.status(400).json({ error: "Session not found" });
   }
 });
 
