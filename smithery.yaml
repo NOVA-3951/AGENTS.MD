@@ -1,0 +1,17 @@
+name: docs-mcp-server
+description: MCP Server that dynamically exposes documentation files from /docs directory as resources
+version: 1.0.0
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+  commandFunction: |-
+    (config) => ({
+      command: "node",
+      args: ["dist/index.js"]
+    })
+
+build:
+  dockerfile: Dockerfile
