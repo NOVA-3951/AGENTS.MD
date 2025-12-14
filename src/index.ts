@@ -123,8 +123,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'mcp-session-id'],
 }));
 
-app.use(express.json());
-
 app.all("/mcp", async (req: Request, res: Response) => {
   try {
     const server = createServer();
@@ -138,7 +136,7 @@ app.all("/mcp", async (req: Request, res: Response) => {
     });
 
     await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
+    await transport.handleRequest(req, res);
   } catch (error) {
     console.error("Error handling MCP request:", error);
     if (!res.headersSent) {
@@ -150,6 +148,8 @@ app.all("/mcp", async (req: Request, res: Response) => {
     }
   }
 });
+
+app.use(express.json());
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", docs: getDocFiles().map(d => d.name) });
