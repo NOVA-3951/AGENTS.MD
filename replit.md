@@ -2,7 +2,7 @@
 
 ## Overview
 
-An MCP (Model Context Protocol) server deployable on Smithery that dynamically exposes documentation files from `/docs/*.md` as resources for AI agents. Uses Streamable HTTP transport for hosted deployments.
+An MCP (Model Context Protocol) server deployable on Smithery that dynamically exposes documentation files from `/docs/*.md` as resources and tools for AI agents. Uses Streamable HTTP transport for hosted deployments.
 
 ## Project Structure
 
@@ -25,12 +25,19 @@ An MCP (Model Context Protocol) server deployable on Smithery that dynamically e
 1. Server runs an Express HTTP server with Streamable HTTP transport
 2. Scans `/docs` directory for `.md` files on startup
 3. Each file is exposed as a resource with URI `docs://<filename>`
-4. AI agents connect via `/mcp` endpoint and can list/read all documentation
+4. Provides tools: `list_docs` and `read_doc` for AI agents
+5. AI agents connect via `/mcp` endpoint
 
 ## Endpoints
 
 - `POST /mcp` - Streamable HTTP MCP endpoint
 - `GET /health` - Health check endpoint
+- `GET /.well-known/mcp-config` - Configuration schema endpoint
+
+## Tools
+
+- `list_docs` - List all available documentation files
+- `read_doc` - Read a specific documentation file by name
 
 ## Development
 
@@ -47,4 +54,4 @@ Configured for Smithery deployment via `smithery.yaml` with HTTP transport on po
 
 ## Adding Documentation
 
-Add `.md` files to the `/docs` directory. They will automatically be exposed as resources named after the filename (without extension).
+Add `.md` files to the `/docs` directory. They will automatically be exposed as resources and accessible via tools.

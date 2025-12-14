@@ -6,6 +6,8 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
   ListResourceTemplatesRequestSchema,
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express, { Request, Response } from "express";
 import cors from "cors";
@@ -56,9 +58,75 @@ function createServer(): Server {
     {
       capabilities: {
         resources: {},
+        tools: {},
       },
     }
   );
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "list_docs",
+          description: "List all available documentation files",
+          inputSchema: {
+            type: "object",
+            properties: {},
+            required: [],
+          },
+        },
+        {
+          name: "read_doc",
+          description: "Read a specific documentation file by name",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Name of the documentation file (without .md extension)",
+              },
+            },
+            required: ["name"],
+          },
+        },
+      ],
+    };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    if (name === "list_docs") {
+      const docs = getDocFiles();
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Available documentation:\n${docs.map(d => `- ${d.name}`).join("\n")}`,
+          },
+        ],
+      };
+    }
+
+    if (name === "read_doc") {
+      const docName = (args as { name: string }).name;
+      const content = readDocFile(docName);
+      if (content === null) {
+        return {
+          content: [{ type: "text", text: `Documentation not found: ${docName}` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: content }],
+      };
+    }
+
+    return {
+      content: [{ type: "text", text: `Unknown tool: ${name}` }],
+      isError: true,
+    };
+  });
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     const docFiles = getDocFiles();
